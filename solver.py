@@ -90,6 +90,10 @@ class Solver(object):
         mnist_iter = iter(self.mnist_loader)
         iter_per_epoch = min(len(svhn_iter), len(mnist_iter))
         
+        print("abcdefgh")
+        print(svhn_iter)
+        print("abcdefrzergh")
+        
         # fixed mnist and svhn for sampling
         fixed_svhn = self.to_var(svhn_iter.next()[0])
         fixed_mnist = self.to_var(mnist_iter.next()[0])
@@ -100,6 +104,7 @@ class Solver(object):
         for step in range(self.train_iters+1):
             # reset data_iter for each epoch
             if (step+1) % iter_per_epoch == 0:
+
                 mnist_iter = iter(self.mnist_loader)
                 svhn_iter = iter(self.svhn_loader)
             
