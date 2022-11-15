@@ -89,10 +89,7 @@ class Solver(object):
         svhn_iter = iter(self.svhn_loader)
         mnist_iter = iter(self.mnist_loader)
         iter_per_epoch = min(len(svhn_iter), len(mnist_iter))
-        
-        print("abcdefgh")
-        print(svhn_iter)
-        print("abcdefrzergh")
+
         
         # fixed mnist and svhn for sampling
         fixed_svhn = self.to_var(svhn_iter.next()[0])
@@ -198,10 +195,11 @@ class Solver(object):
             
             # print the log info
             if (step+1) % self.log_step == 0:
-                print('Step [%d/%d], d_real_loss: %.4f, d_mnist_loss: %.4f, d_svhn_loss: %.4f, '
+                """print('Step [%d/%d], d_real_loss: %.4f, d_mnist_loss: %.4f, d_svhn_loss: %.4f, '
                       'd_fake_loss: %.4f, g_loss: %.4f' 
                       %(step+1, self.train_iters, d_real_loss.data[0], d_mnist_loss.data[0], 
-                        d_svhn_loss.data[0], d_fake_loss.data[0], g_loss.data[0]))
+                        d_svhn_loss.data[0], d_fake_loss.data[0], g_loss.data[0]))"""
+                print('Step [%d/%d]'%(step+1, self.train_iters) )
 
             # save the sampled images
             if (step+1) % self.sample_step == 0:
