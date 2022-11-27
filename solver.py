@@ -5,6 +5,8 @@ import os
 import pickle
 import scipy.io
 import numpy as np
+import scipy.misc
+import imageio
 
 from torch.autograd import Variable
 from torch import optim
@@ -13,9 +15,9 @@ from model import D1, D2
 
 
 class Solver(object):
-    def __init__(self, config, svhn_loader, mnist_loader):
-        self.svhn_loader = svhn_loader
-        self.mnist_loader = mnist_loader
+    def __init__(self, config, human_loader, anime_loader):
+        self.human_loader = human_loader
+        self.anime_loader = anime_loader
         self.g12 = None
         self.g21 = None
         self.d1 = None
@@ -86,14 +88,14 @@ class Solver(object):
         self.d_optimizer.zero_grad()
 
     def train(self):
-        svhn_iter = iter(self.svhn_loader)
-        mnist_iter = iter(self.mnist_loader)
-        iter_per_epoch = min(len(svhn_iter), len(mnist_iter))
+        human_iter = iter(self.human_loader)
+        anime_iter = iter(self.anime_loader)
+        iter_per_epoch = min(len(human_iter), len(anime_iter))
 
         
-        # fixed mnist and svhn for sampling
-        fixed_svhn = self.to_var(svhn_iter.next()[0])
-        fixed_mnist = self.to_var(mnist_iter.next()[0])
+        # fixed anime and human for sampling
+        fixed_human = self.to_var(human_iter.next()[0])
+        fixed_anime = self.to_var(anime_iter.next()[0])
         
         # loss if use_labels = True
         criterion = nn.CrossEntropyLoss()
@@ -102,56 +104,56 @@ class Solver(object):
             # reset data_iter for each epoch
             if (step+1) % iter_per_epoch == 0:
 
-                mnist_iter = iter(self.mnist_loader)
-                svhn_iter = iter(self.svhn_loader)
+                anime_iter = iter(self.anime_loader)
+                human_iter = iter(self.human_loader)
             
-            # load svhn and mnist dataset
-            svhn, s_labels = svhn_iter.next() 
-            svhn, s_labels = self.to_var(svhn), self.to_var(s_labels).long().squeeze()
-            mnist, m_labels = mnist_iter.next() 
-            mnist, m_labels = self.to_var(mnist), self.to_var(m_labels)
+            # load human and anime dataset
+            human, s_labels = human_iter.next() 
+            human, s_labels = self.to_var(human), self.to_var(s_labels).long().squeeze()
+            anime, m_labels = anime_iter.next() 
+            anime, m_labels = self.to_var(anime), self.to_var(m_labels)
 
             if self.use_labels:
-                mnist_fake_labels = self.to_var(
-                    torch.Tensor([self.num_classes]*svhn.size(0)).long())
-                svhn_fake_labels = self.to_var(
-                    torch.Tensor([self.num_classes]*mnist.size(0)).long())
+                anime_fake_labels = self.to_var(
+                    torch.Tensor([self.num_classes]*human.size(0)).long())
+                human_fake_labels = self.to_var(
+                    torch.Tensor([self.num_classes]*anime.size(0)).long())
             
             #============ train D ============#
             
             # train with real images
             self.reset_grad()
-            out = self.d1(mnist)
+            out = self.d1(anime)
             if self.use_labels:
                 d1_loss = criterion(out, m_labels)
             else:
                 d1_loss = torch.mean((out-1)**2)
             
-            out = self.d2(svhn)
+            out = self.d2(human)
             if self.use_labels:
                 d2_loss = criterion(out, s_labels)
             else:
                 d2_loss = torch.mean((out-1)**2)
             
-            d_mnist_loss = d1_loss
-            d_svhn_loss = d2_loss
+            d_anime_loss = d1_loss
+            d_human_loss = d2_loss
             d_real_loss = d1_loss + d2_loss
             d_real_loss.backward()
             self.d_optimizer.step()
             
             # train with fake images
             self.reset_grad()
-            fake_svhn = self.g12(mnist)
-            out = self.d2(fake_svhn)
+            fake_human = self.g12(anime)
+            out = self.d2(fake_human)
             if self.use_labels:
-                d2_loss = criterion(out, svhn_fake_labels)
+                d2_loss = criterion(out, human_fake_labels)
             else:
                 d2_loss = torch.mean(out**2)
             
-            fake_mnist = self.g21(svhn)
-            out = self.d1(fake_mnist)
+            fake_anime = self.g21(human)
+            out = self.d1(fake_anime)
             if self.use_labels:
-                d1_loss = criterion(out, mnist_fake_labels)
+                d1_loss = criterion(out, anime_fake_labels)
             else:
                 d1_loss = torch.mean(out**2)
             
@@ -161,62 +163,64 @@ class Solver(object):
             
             #============ train G ============#
             
-            # train mnist-svhn-mnist cycle
+            # train anime-human-anime cycle
             self.reset_grad()
-            fake_svhn = self.g12(mnist)
-            out = self.d2(fake_svhn)
-            reconst_mnist = self.g21(fake_svhn)
+            fake_human = self.g12(anime)
+            out = self.d2(fake_human)
+            reconst_anime = self.g21(fake_human)
             if self.use_labels:
                 g_loss = criterion(out, m_labels) 
             else:
                 g_loss = torch.mean((out-1)**2) 
 
             if self.use_reconst_loss:
-                g_loss += torch.mean((mnist - reconst_mnist)**2)
+                g_loss += torch.mean((anime - reconst_anime)**2)
 
             g_loss.backward()
             self.g_optimizer.step()
 
-            # train svhn-mnist-svhn cycle
+            # train human-anime-human cycle
             self.reset_grad()
-            fake_mnist = self.g21(svhn)
-            out = self.d1(fake_mnist)
-            reconst_svhn = self.g12(fake_mnist)
+            fake_anime = self.g21(human)
+            out = self.d1(fake_anime)
+            reconst_human = self.g12(fake_anime)
             if self.use_labels:
                 g_loss = criterion(out, s_labels) 
             else:
                 g_loss = torch.mean((out-1)**2) 
 
             if self.use_reconst_loss:
-                g_loss += torch.mean((svhn - reconst_svhn)**2)
+                g_loss += torch.mean((human - reconst_human)**2)
 
             g_loss.backward()
             self.g_optimizer.step()
             
             # print the log info
             if (step+1) % self.log_step == 0:
-                """print('Step [%d/%d], d_real_loss: %.4f, d_mnist_loss: %.4f, d_svhn_loss: %.4f, '
+                """print('Step [%d/%d], d_real_loss: %.4f, d_anime_loss: %.4f, d_human_loss: %.4f, '
                       'd_fake_loss: %.4f, g_loss: %.4f' 
-                      %(step+1, self.train_iters, d_real_loss.data[0], d_mnist_loss.data[0], 
-                        d_svhn_loss.data[0], d_fake_loss.data[0], g_loss.data[0]))"""
+                      %(step+1, self.train_iters, d_real_loss.data[0], d_anime_loss.data[0], 
+                        d_human_loss.data[0], d_fake_loss.data[0], g_loss.data[0]))"""
                 print('Step [%d/%d]'%(step+1, self.train_iters) )
 
             # save the sampled images
             if (step+1) % self.sample_step == 0:
-                fake_svhn = self.g12(fixed_mnist)
-                fake_mnist = self.g21(fixed_svhn)
+                fake_human = self.g12(fixed_anime)
+                fake_anime = self.g21(fixed_human)
                 
-                mnist, fake_mnist = self.to_data(fixed_mnist), self.to_data(fake_mnist)
-                svhn , fake_svhn = self.to_data(fixed_svhn), self.to_data(fake_svhn)
+                anime, fake_anime = self.to_data(fixed_anime), self.to_data(fake_anime)
+                human , fake_human = self.to_data(fixed_human), self.to_data(fake_human)
                 
-                merged = self.merge_images(mnist, fake_svhn)
+                merged = self.merge_images(anime, fake_human)
                 path = os.path.join(self.sample_path, 'sample-%d-m-s.png' %(step+1))
-                scipy.misc.imsave(path, merged)
+                imageio.imwrite(path, merged)
+                #scipy.misc.(path, merged)
                 print ('saved %s' %path)
                 
-                merged = self.merge_images(svhn, fake_mnist)
+                merged = self.merge_images(human, fake_anime)
                 path = os.path.join(self.sample_path, 'sample-%d-s-m.png' %(step+1))
-                scipy.misc.imsave(path, merged)
+                imageio.imwrite(path, merged)
+                #scipy.misc.imsave(path, merged)
                 print ('saved %s' %path)
             
             if (step+1) % 5000 == 0:

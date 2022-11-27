@@ -8,9 +8,11 @@ def str2bool(v):
     return v.lower() in ('true')
 
 def main(config):
-    svhn_loader, mnist_loader = get_loader(config)
+	#SVHN = HUMAN
+	#MNIST = ANIME
+    human_loader, anime_loader = get_loader(config)
     
-    solver = Solver(config, svhn_loader, mnist_loader)
+    solver = Solver(config, human_loader, anime_loader)
     cudnn.benchmark = True 
     
     # create directories if not exist
@@ -29,15 +31,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     
     # model hyper-parameters
-    parser.add_argument('--image_size', type=int, default=32)
-    parser.add_argument('--g_conv_dim', type=int, default=64)
-    parser.add_argument('--d_conv_dim', type=int, default=64)
+    parser.add_argument('--image_size', type=int, default=64)
+    parser.add_argument('--g_conv_dim', type=int, default=128)
+    parser.add_argument('--d_conv_dim', type=int, default=128)
     parser.add_argument('--use_reconst_loss', required=True, type=str2bool)
     parser.add_argument('--use_labels', required=True, type=str2bool)
     parser.add_argument('--num_classes', type=int, default=10)
     
     # training hyper-parameters
-    parser.add_argument('--train_iters', type=int, default=40000)
+    parser.add_argument('--train_iters', type=int, default=4000)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--num_workers', type=int, default=2)
     parser.add_argument('--lr', type=float, default=0.0002)
@@ -48,8 +50,8 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='train')
     parser.add_argument('--model_path', type=str, default='./models')
     parser.add_argument('--sample_path', type=str, default='./samples')
-    parser.add_argument('--mnist_path', type=str, default='./mnist')
-    parser.add_argument('--svhn_path', type=str, default='./svhn')
+    parser.add_argument('--anime_path', type=str, default='./anime')
+    parser.add_argument('--human_path', type=str, default='./human')
     parser.add_argument('--log_step', type=int , default=10)
     parser.add_argument('--sample_step', type=int , default=500)
 

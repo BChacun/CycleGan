@@ -19,11 +19,11 @@ def conv(c_in, c_out, k_size, stride=2, pad=1, bn=True):
     return nn.Sequential(*layers)
 
 class G12(nn.Module):
-    """Generator for transfering from mnist to svhn"""
-    def __init__(self, conv_dim=64):
+    """Generator for transfering from anime to human"""
+    def __init__(self, conv_dim=128):
         super(G12, self).__init__()
         # encoding blocks
-        self.conv1 = conv(1, conv_dim, 4)
+        self.conv1 = conv(3, conv_dim, 4)
         self.conv2 = conv(conv_dim, conv_dim*2, 4)
         
         # residual blocks
@@ -46,8 +46,8 @@ class G12(nn.Module):
         return out
     
 class G21(nn.Module):
-    """Generator for transfering from svhn to mnist"""
-    def __init__(self, conv_dim=64):
+    """Generator for transfering from human to anime"""
+    def __init__(self, conv_dim=128):
         super(G21, self).__init__()
         # encoding blocks
         self.conv1 = conv(3, conv_dim, 4)
@@ -59,7 +59,7 @@ class G21(nn.Module):
         
         # decoding blocks
         self.deconv1 = deconv(conv_dim*2, conv_dim, 4)
-        self.deconv2 = deconv(conv_dim, 1, 4, bn=False)
+        self.deconv2 = deconv(conv_dim, 3, 4, bn=False)
         
     def forward(self, x):
         out = F.leaky_relu(self.conv1(x), 0.05)      # (?, 64, 16, 16)
@@ -73,10 +73,10 @@ class G21(nn.Module):
         return out
     
 class D1(nn.Module):
-    """Discriminator for mnist."""
-    def __init__(self, conv_dim=64, use_labels=False):
+    """Discriminator for anime."""
+    def __init__(self, conv_dim=128, use_labels=False):
         super(D1, self).__init__()
-        self.conv1 = conv(1, conv_dim, 4, bn=False)
+        self.conv1 = conv(3, conv_dim, 4, bn=False)
         self.conv2 = conv(conv_dim, conv_dim*2, 4)
         self.conv3 = conv(conv_dim*2, conv_dim*4, 4)
         n_out = 11 if use_labels else 1
@@ -90,8 +90,8 @@ class D1(nn.Module):
         return out
 
 class D2(nn.Module):
-    """Discriminator for svhn."""
-    def __init__(self, conv_dim=64, use_labels=False):
+    """Discriminator for human."""
+    def __init__(self, conv_dim=128, use_labels=False):
         super(D2, self).__init__()
         self.conv1 = conv(3, conv_dim, 4, bn=False)
         self.conv2 = conv(conv_dim, conv_dim*2, 4)
