@@ -22,8 +22,6 @@
 
 ## Quick start
 
-Some text
+To start training :
 
-- Instruction 1
-- Instruction 2
-- Instruction 3
+python main.py --use_labels=False --use_reconst_loss=True
